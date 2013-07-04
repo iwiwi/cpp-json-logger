@@ -150,7 +150,7 @@ if __FILE__ == $0
     puts(HTML_FOOTER)
   else
     len.times do |i|
-      puts(table.map { |c| i < c.length ? prettify(c[i]) : "" }.join("\t"))
+      puts(table.map { |c| i < c.length ? c[i] : "" }.join("\t"))
     end
   end
 end
