@@ -30,9 +30,17 @@
 #include "jlog.h"
 
 std::string FLAGS_jlog_out = "./jlog";
+bool FLAGS_jlog_suppress_log = false;
 
 namespace jlog_internal {
 jlog jlog::instance_;
+
+struct null_streambuf : public std::streambuf {
+  virtual int overflow(int c) { return c; }
+};
+
+null_streambuf ns;
+std::ostream jlog::null_ostream(&ns);
 
 double get_current_time_sec() {
   struct timeval tv;
@@ -74,6 +82,8 @@ void JLOG_INIT(int *argc, char **argv) {
   for (int i = 0; i < *argc; ++i) {
     if (strncmp(argv[i], "--jlog_out=", 11) == 0) {
       FLAGS_jlog_out = argv[i] + 11;
+    } else if (strncmp(argv[i], "--jlog_suppress_log", 19) == 0) {
+      FLAGS_jlog_suppress_log = true;
     } else {
       argv[k++] = argv[i];
     }
