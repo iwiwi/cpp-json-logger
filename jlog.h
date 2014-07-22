@@ -46,6 +46,7 @@
 #include <cstdlib>
 #include <stdint.h>
 #include <vector>
+#include <unistd.h>
 
 extern std::string FLAGS_jlog_out;
 
@@ -54,6 +55,7 @@ double get_current_time_sec();
 long get_memory_usage();
 
 struct json_node {
+  virtual ~json_node() {};
   virtual void print(std::ostream &os, int depth, bool last) = 0;
 };
 
@@ -73,11 +75,53 @@ struct json_parent : json_node {
   }
 };
 
-struct json_leaf : json_node {
+template<typename value_t> struct json_leaf : json_node {
   std::string value;
+  
+  virtual void set_value(value_t v) {
+    std::stringstream ss;
+    ss << v;
+    ss >> value;
+  }
 
   virtual void print(std::ostream &os, int, bool last) {
     os << "\"" << value << (last ? "\"" : "\",") << std::endl;
+  }
+};
+
+template<typename value_t> struct json_leaf_numerical : json_node {
+  value_t value;
+  
+  virtual void set_value(value_t v) {
+    value = v;
+  }
+  
+  virtual void print(std::ostream &os, int, bool last) {
+    os << value << (last ? "" : ",") << std::endl;
+  }
+};
+
+template<> struct json_leaf<unsigned long long> : json_leaf_numerical<unsigned long long> {};
+template<> struct json_leaf<long long> : json_leaf_numerical<long long> {};
+template<> struct json_leaf<unsigned long> : json_leaf_numerical<unsigned long> {};
+template<> struct json_leaf<long> : json_leaf_numerical<long> {};
+template<> struct json_leaf<unsigned int> : json_leaf_numerical<unsigned int> {};
+template<> struct json_leaf<int> : json_leaf_numerical<int> {};
+template<> struct json_leaf<unsigned short> : json_leaf_numerical<unsigned short> {};
+template<> struct json_leaf<short> : json_leaf_numerical<short> {};
+template<> struct json_leaf<long double> : json_leaf_numerical<long double> {};
+template<> struct json_leaf<double> : json_leaf_numerical<double> {};
+template<> struct json_leaf<float> : json_leaf_numerical<float> {};
+ 
+template<> struct json_leaf<bool> : json_node {
+  bool value;
+  
+  virtual void set_value(bool v) {
+    value = v;
+  }
+  
+  virtual void print(std::ostream &os, int, bool last) {
+    os << (value ? "true" : "false") << (last ? "" : ",") << std::endl;
   }
 };
 
@@ -111,8 +155,8 @@ class jlog {
     }
 
     json_node *&jn = instance_.reach_path(path);
-    json_leaf *jl = new json_leaf;
-    to_string<value_t>(value, &jl->value);
+    json_leaf<value_t> *jl = new json_leaf<value_t>;
+    jl->set_value(value);
     jn = jl;
   }
 
@@ -123,17 +167,17 @@ class jlog {
       std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDOUT" << std::endl;
       instance_.already_warned_ = true;
     }
-
+    
     if (instance_.nested_glog_flag_ && glog) {
       LOG() << path << " = " << value << std::endl;
     }
-
+    
     json_node *&jn = instance_.reach_path(path);
     if (jn == NULL) jn = new json_array;
     json_array *ja = dynamic_cast<json_array*>(jn);
     assert(ja);
-    json_leaf *jl = new json_leaf;
-    to_string<value_t>(value, &jl->value);
+    json_leaf<value_t> *jl = new json_leaf<value_t>;
+    jl->set_value(value);
     ja->children.push_back(jl);
   }
 
@@ -164,8 +208,7 @@ class jlog {
        << std::setw(2) << tm_time.tm_min
        << std::setw(2) << tm_time.tm_sec
        << '.'
-       << getpid()
-       << '\0';
+       << getpid();
 
     instance_.filename_ = os.str();
     LOG() << "JLOG: " << instance_.filename_ << std::endl;
@@ -202,13 +245,6 @@ class jlog {
         << std::setw(2) << tm_time.tm_min << ':'
         << std::setw(2) << tm_time.tm_sec << "] ";
     return std::cerr;
-  }
-
-  template<typename value_t>
-  static void to_string(value_t value, std::string *s) {
-    std::ostringstream oss;
-    oss << value;
-    *s = oss.str();
   }
 
   jlog() : already_warned_(false), nested_glog_flag_(true) {
