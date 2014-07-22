@@ -49,6 +49,7 @@
 #include <unistd.h>
 
 extern std::string FLAGS_jlog_out;
+extern bool FLAGS_jlog_suppress_log;
 
 namespace jlog_internal {
 double get_current_time_sec();
@@ -231,6 +232,9 @@ class jlog {
 
  private:
   static std::ostream &LOG() {
+    if (FLAGS_jlog_suppress_log) {
+      return null_ostream;
+    }
     time_t timestamp = time(NULL);
     struct ::tm tm_time;
     localtime_r(&timestamp, &tm_time);
@@ -309,6 +313,8 @@ class jlog {
   json_node *current_;
   bool already_warned_;
   bool nested_glog_flag_;
+
+  static std::ostream null_ostream;
 
   const char *program_name_;
   std::string filename_;
