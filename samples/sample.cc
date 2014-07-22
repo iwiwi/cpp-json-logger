@@ -13,6 +13,8 @@ int main(int argc, char **argv) {
   JLOG_PUT("hoge.ten", 10);
   JLOG_PUT("hoge.pi", 3.14);
   JLOG_PUT("hoge.hello.helloooo", "Hello");
+  JLOG_PUT("hoge.true", true);
+  JLOG_PUT("hoge.false", false);
 
   // Add
   for (int i = 0; i < 3; ++i) {
