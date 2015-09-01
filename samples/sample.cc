@@ -43,5 +43,16 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Ignore
+  JLOG_OPEN("poyo") {
+    JLOG_IGNORE {
+      JLOG_PUT("ignored", "sad");
+      JLOG_IGNORE {
+        JLOG_PUT("nest", "sad");
+      }
+    }
+    JLOG_PUT("notignored", "happy");
+  }
+
   return 0;
 }
