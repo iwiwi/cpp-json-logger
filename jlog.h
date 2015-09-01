@@ -80,9 +80,9 @@ template<typename value_t> struct json_leaf : json_node {
   std::string value;
   
   virtual void set_value(value_t v) {
-    std::stringstream ss;
-    ss << v;
-    ss >> value;
+    std::ostringstream oss;
+    oss << v;
+    value = oss.str();
   }
 
   virtual void print(std::ostream &os, int, bool last) {
@@ -145,8 +145,9 @@ class jlog {
  public:
   template<typename value_t>
   static void jlog_put(const char *path, value_t value) {
+    if (instance_.ignore_nest_level_ > 0) return;
     if (instance_.filename_.empty() && !instance_.already_warned_) {
-      std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDOUT" << std::endl;
+      std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDERR" << std::endl;
       instance_.already_warned_ = true;
     }
 
@@ -158,8 +159,9 @@ class jlog {
 
   template<typename value_t>
   static void jlog_add(const char *path, value_t value) {
+    if (instance_.ignore_nest_level_ > 0) return;
     if (instance_.filename_.empty() && !instance_.already_warned_) {
-      std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDOUT" << std::endl;
+      std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDERR" << std::endl;
       instance_.already_warned_ = true;
     }
     
@@ -241,14 +243,14 @@ class jlog {
     return std::cerr;
   }
 
-  jlog() : already_warned_(false) {
+  jlog() : already_warned_(false), ignore_nest_level_(0) {
     current_ = &root_;
   }
 
   ~jlog() {
     if (filename_.empty()) {
       if (!root_.children.empty()) {
-        root_.print(std::cout, 0, true);
+        root_.print(std::cerr, 0, true);
       }
     } else {
       jlog_put("run.time", get_current_time_sec() - start_time_);
@@ -261,7 +263,7 @@ class jlog {
       if (!ofs) {
         perror("ofstream");
         LOG() << "JLOG: Failed to open output file, write to STDERR" << std::endl;
-        root_.print(std::cout, 0, true);
+        root_.print(std::cerr, 0, true);
       }
       root_.print(ofs, 0, true);
       LOG() << "JLOG: " << FLAGS_jlog_out + "/" + filename_ << std::endl;
@@ -302,6 +304,7 @@ class jlog {
   json_parent root_;
   json_node *current_;
   bool already_warned_;
+  int ignore_nest_level_;
 
   static std::ostream null_ostream;
 
@@ -312,12 +315,14 @@ class jlog {
   static jlog instance_;
 
   friend class jlog_opener;
-  friend class jlog_add_opener;
+  friend class jlog_benchmarker;
+  friend class jlog_ignorer;
 };
 
 class jlog_opener {
  public:
   jlog_opener(bool add, const char *path) {
+    if (jlog::instance_.ignore_nest_level_ > 0) return;
     if (add == false) {
       prev_ = jlog::instance_.current_;
       json_node *& jn = jlog::instance_.reach_path(path);
@@ -336,6 +341,7 @@ class jlog_opener {
   }
 
   ~jlog_opener() {
+    if (jlog::instance_.ignore_nest_level_ > 0) return;
     jlog::instance_.current_ = prev_;
   }
 
@@ -351,10 +357,12 @@ class jlog_benchmarker {
  public:
   jlog_benchmarker(bool add, const char *path)
       : path_(path), add_(add) {
+    if (jlog::instance_.ignore_nest_level_ > 0) return;
     start_ = get_current_time_sec();
   }
 
   ~jlog_benchmarker() {
+    if (jlog::instance_.ignore_nest_level_ > 0) return;
     double r = get_current_time_sec() - start_;
     if (add_) {
       jlog::jlog_add(path_, r);
@@ -372,6 +380,22 @@ class jlog_benchmarker {
   bool add_;
   double start_;
 };
+
+class jlog_ignorer {
+ public:
+  jlog_ignorer() {
+    jlog::instance_.ignore_nest_level_++;
+  }
+
+  ~jlog_ignorer() {
+    jlog::instance_.ignore_nest_level_--;
+  }
+
+  operator bool() {
+    return false;
+  }
+};
+
 }  // namespace jlog_internal
 
 #define JLOG_OPEN(...)                                              \
@@ -389,6 +413,10 @@ class jlog_benchmarker {
 #define JLOG_ADD_BENCHMARK(...)                                     \
   if (jlog_internal::jlog_benchmarker o__                           \
       = jlog_internal::jlog_benchmarker(true, __VA_ARGS__)); else
+
+#define JLOG_IGNORE                                                 \
+  if (jlog_internal::jlog_ignorer o__                               \
+      = jlog_internal::jlog_ignorer()); else
 
 template<typename value_t>
 inline void JLOG_PUT(const char *path, value_t value) {
