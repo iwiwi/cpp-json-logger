@@ -1,3 +1,4 @@
+#include <limits>
 #include "jlog.h"
 
 void f(int i) {
@@ -54,5 +55,14 @@ int main(int argc, char **argv) {
     JLOG_PUT("notignored", "happy");
   }
 
+  // NaN, Infinity
+  if (std::numeric_limits<double>::has_quiet_NaN) {
+    JLOG_PUT("nan", std::numeric_limits<double>::quiet_NaN());
+  }
+
+  if (std::numeric_limits<double>::has_infinity) {
+    JLOG_PUT("inf", std::numeric_limits<double>::infinity());
+    JLOG_PUT("neg-inf", -std::numeric_limits<double>::infinity());
+  }
   return 0;
 }

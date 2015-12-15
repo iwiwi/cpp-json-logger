@@ -47,6 +47,7 @@
 #include <stdint.h>
 #include <vector>
 #include <unistd.h>
+#include <math.h>
 
 extern std::string FLAGS_jlog_out;
 extern bool FLAGS_jlog_suppress_log;
@@ -102,6 +103,21 @@ template<typename value_t> struct json_leaf_numerical : json_node {
   }
 };
 
+template<typename value_t> struct json_leaf_real : json_node {
+  value_t value;
+  virtual void set_value(value_t v) {
+    value = v;
+  }
+
+  virtual void print(std::ostream &os, int, bool last) {
+    if (isnan(value) || isinf(value)) {
+      os << "\"" << value << (last ? "\"" : "\",") << std::endl;
+    } else {
+      os << value << (last ? "" : ",") << std::endl;
+    }
+  }
+};
+
 template<> struct json_leaf<unsigned long long> : json_leaf_numerical<unsigned long long> {};
 template<> struct json_leaf<long long> : json_leaf_numerical<long long> {};
 template<> struct json_leaf<unsigned long> : json_leaf_numerical<unsigned long> {};
@@ -110,9 +126,9 @@ template<> struct json_leaf<unsigned int> : json_leaf_numerical<unsigned int> {}
 template<> struct json_leaf<int> : json_leaf_numerical<int> {};
 template<> struct json_leaf<unsigned short> : json_leaf_numerical<unsigned short> {};
 template<> struct json_leaf<short> : json_leaf_numerical<short> {};
-template<> struct json_leaf<long double> : json_leaf_numerical<long double> {};
-template<> struct json_leaf<double> : json_leaf_numerical<double> {};
-template<> struct json_leaf<float> : json_leaf_numerical<float> {};
+template<> struct json_leaf<long double> : json_leaf_real<long double> {};
+template<> struct json_leaf<double> : json_leaf_real<double> {};
+template<> struct json_leaf<float> : json_leaf_real<float> {};
  
 template<> struct json_leaf<bool> : json_node {
   bool value;
