@@ -167,6 +167,8 @@ class jlog {
       instance_.already_warned_ = true;
     }
 
+    LOG() << path << " = " << value << std::endl;
+
     json_node *&jn = instance_.reach_path(path);
     json_leaf<value_t> *jl = new json_leaf<value_t>;
     jl->set_value(value);
@@ -180,6 +182,8 @@ class jlog {
       std::cerr << "WARNING: Logging without calling JLOG_INIT is written to STDERR" << std::endl;
       instance_.already_warned_ = true;
     }
+
+    LOG() << path << " = " << value << std::endl;
     
     json_node *&jn = instance_.reach_path(path);
     if (jn == NULL) jn = new json_array;
