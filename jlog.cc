@@ -26,7 +26,8 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+#include <sys/time.h>
+#include <sys/resource.h>
 #include "jlog.h"
 
 std::string FLAGS_jlog_out = "./jlog";
@@ -49,31 +50,9 @@ double get_current_time_sec() {
 }
 
 long get_memory_usage() {
-  //  http://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-run-time-in-c
-
-  std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);
-  if (!stat_stream) {
-    return 0;
-  }
-
-  std::string pid, comm, state, ppid, pgrp, session, tty_nr;
-  std::string tpgid, flags, minflt, cminflt, majflt, cmajflt;
-  std::string utime, stime, cutime, cstime, priority, nice;
-  std::string O, itrealvalue, starttime;
-  long vm_usage, rss;
-
-  stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
-              >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
-              >> utime >> stime >> cutime >> cstime >> priority >> nice
-              >> O >> itrealvalue >> starttime >> vm_usage >> rss;
-  stat_stream.close();
-
-  // in bytes
-  long page_size = sysconf(_SC_PAGE_SIZE);
-  long resident_set = rss * page_size;
-
-  return resident_set;
-  // return vm_usage;
+  struct rusage usage;
+  getrusage(RUSAGE_SELF, &usage);
+  return usage.ru_maxrss;
 }
 }
 
