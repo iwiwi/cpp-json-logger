@@ -342,14 +342,13 @@ class jlog {
 class jlog_opener {
  public:
   jlog_opener(bool add, const char *path) {
+    prev_ = jlog::instance_.current_;
     if (jlog::instance_.ignore_nest_level_ > 0) return;
     if (add == false) {
-      prev_ = jlog::instance_.current_;
       json_node *& jn = jlog::instance_.reach_path(path);
       if (jn == NULL) jn = new json_parent;
       jlog::instance_.current_ = jn;
     } else {
-      prev_ = jlog::instance_.current_;
       json_node *& jn = jlog::instance_.reach_path(path);
       if (jn == NULL) jn = new json_array;
       json_array *ja = dynamic_cast<json_array*>(jn);
