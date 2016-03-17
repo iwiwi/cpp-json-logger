@@ -64,5 +64,10 @@ int main(int argc, char **argv) {
     JLOG_PUT("inf", std::numeric_limits<double>::infinity());
     JLOG_PUT("neg-inf", -std::numeric_limits<double>::infinity());
   }
+
+  // No stderr output
+  JLOG_PUT("stderr_output", "false", false);
+  JLOG_PUT("stderr_output", "true (default)", true);
+
   return 0;
 }
