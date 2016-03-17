@@ -15,6 +15,10 @@ def rec(data, path)  # path in array
     data = data[cmd]
   end
 
+  if data.class != Array
+    return [data]
+  end
+
   res = []
   data.each do |d|
     if path.size == 0
