@@ -65,6 +65,13 @@ int main(int argc, char **argv) {
     JLOG_PUT("neg-inf", -std::numeric_limits<double>::infinity());
   }
 
+  // Add-open
+  for (int i = 1; i <= 3; ++i) {
+    JLOG_ADD_OPEN("piyo.add_open") {
+      f(i);
+    }
+  }
+  
   // No stderr output
   JLOG_PUT("stderr_output", "false", false);
   JLOG_PUT("stderr_output", "true (default)", true);
